@@ -19,8 +19,6 @@ static ttnn::Tensor convert_tensor_to_4d(ttnn::Tensor input_tensor) {
     ttnn::Tensor input_tensor_4D;
     if (input_tensor.get_logical_shape().rank() < 4) {
         input_tensor_4D = ttnn::unsqueeze_to_4D(input_tensor);
-    } else if (input_tensor.get_logical_shape().rank() > 4) {
-        input_tensor_4D = squeeze_from_ND_to_4D(input_tensor);
     }
     return input_tensor_4D;
 }
