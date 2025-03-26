@@ -34,7 +34,7 @@ static std::vector<T> convert_span_to_4D(std::span<const T> span, int val) {
     return vec;
 }
 
-pbool eq_spans(const auto a, const auto b) { return std::equal(a.begin(), a.end(), b.begin(), b.end()); }
+bool eq_spans(const auto a, const auto b) { return std::equal(a.begin(), a.end(), b.begin(), b.end()); }
 
 ttnn::Shape update_original_shape(const ttnn::Shape& padded_shape, const ttnn::Shape& input_shape) {
     ttnn::SmallVector<uint32_t> updated_shape;
