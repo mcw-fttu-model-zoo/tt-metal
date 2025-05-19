@@ -1,5 +1,5 @@
 from torchvision.utils import _make_ntuple
-from typing import Callable, Optional, Union
+from typing import Callable, Optional, Union, List
 from collections.abc import Sequence
 
 import torch
@@ -198,7 +198,7 @@ class InvertedResidual(nn.Module):
 
         self.use_res_connect = cnf.stride == 1 and cnf.input_channels == cnf.out_channels
 
-        layers: list[nn.Module] = []
+        layers: List[nn.Module] = []
         activation_layer = nn.Hardswish if cnf.use_hs else nn.ReLU
 
         # expand
