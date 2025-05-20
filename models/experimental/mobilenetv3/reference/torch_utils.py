@@ -198,7 +198,7 @@ class InvertedResidual(nn.Module):
 
         self.use_res_connect = cnf.stride == 1 and cnf.input_channels == cnf.out_channels
 
-        layers: List[nn.Module] = []
+        layers: List = []
         activation_layer = nn.Hardswish if cnf.use_hs else nn.ReLU
 
         # expand
@@ -238,12 +238,17 @@ class InvertedResidual(nn.Module):
             )
         )
 
-        self.block = nn.Sequential(*layers)
+        # self.block = nn.Sequential(*layers)
+        self.block = nn.ModuleList(layers)  # List
         self.out_channels = cnf.out_channels
         self._is_cn = cnf.stride > 1
 
     def forward(self, input: Tensor) -> Tensor:
-        result = self.block(input)
+        # result = self.block(input)
+        result = input
+        for layer in self.block:
+            result = layer(result)
+
         if self.use_res_connect:
             result += input
         return result

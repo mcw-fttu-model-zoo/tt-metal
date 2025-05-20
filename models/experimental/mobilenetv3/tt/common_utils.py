@@ -94,14 +94,17 @@ class TtMobileNetV3Conv2D:
             self.shard_layout = ttnn.TensorMemoryLayout.WIDTH_SHARDED
 
         self.use_shallow_covariant = use_shallow_covariant
-        self.conv_config = self._initialize_conv_config()
         self.compute_config = self._initialize_compute_config()
         self.weights, self.bias = self.parameters
         self.activation_fn = activation_fn
         self.in_channels = in_channels
         self.out_channels = out_channels
+        self.conv_config = self._initialize_conv_config()
 
     def _initialize_conv_config(self):
+        if self.activation_fn is None:
+            self.activation_fn = ""
+
         conv_config = ttnn.Conv2dConfig(
             dtype=self.activation_dtype,
             weights_dtype=ttnn.bfloat8_b,
@@ -203,7 +206,7 @@ class TtSqueezeExcitation:
             parameters=(parameters["fc2"]["weight"], parameters["fc2"]["bias"]),
             input_params=[1, 1, 0, input_channels],
             batch_size=batch_size,
-            activation_fn=activation,
+            activation_fn=None,
         )
 
     def _scale(self, x):
@@ -271,8 +274,6 @@ class TtInvertedResidual:
 
         # 1. Expand conv
         if config.expanded_channels != config.input_channels:
-            print("Control inside if expanded_channels != input_channels")
-            print("activation_layer: ", activation_layer)
             self.conv.append(
                 TtMobileNetV3Conv2D(
                     device=device,
@@ -332,7 +333,7 @@ class TtInvertedResidual:
                 parameters=(model_params["block"][idx]["conv"]["weight"], model_params["block"][idx]["conv"]["bias"]),
                 input_params=[1, 1, 0, config.out_channels],
                 batch_size=batch_size,
-                activation_fn=None,  # No activation function
+                activation_fn=None,  # No activation functionq
             )
         )
 

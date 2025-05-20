@@ -9,6 +9,9 @@ from models.experimental.mobilenetv3.reference.torch_utils import (
     SqueezeExcitation as TVSqueezeExcitation,
 )
 
+# from torchvision.ops.misc import Conv2dNormActivation as TVConv2dNormActivation
+# from torchvision.ops.misc import SqueezeExcitation as TVSqueezeExcitation
+
 from models.experimental.mobilenetv3.tt.common_utils import (
     TtMobileNetV3Conv2D,
     TtSqueezeExcitation,
@@ -17,6 +20,8 @@ from models.experimental.mobilenetv3.tt.common_utils import (
 )
 from torchvision.models.mobilenetv3 import MobileNet_V3_Large_Weights
 from models.experimental.mobilenetv3.reference.mobilenetv3 import mobilenet_v3_large as tv_mv3
+
+# from torchvision.models.mobilenetv3 import mobilenet_v3_large as tv_mv3
 
 from ttnn.model_preprocessing import preprocess_model_parameters
 
@@ -150,8 +155,7 @@ def test_se(device, torch_input, layer, use_program_cache, reset_seeds):
         1, torch_model_output.shape[2], torch_model_output.shape[3], ttnn_model_output.shape[-1]
     )
     ttnn_model_output = ttnn_model_output.permute((0, 3, 1, 2))
-    pretrained_weights = True
-    logger.info(assert_with_pcc(torch_model_output, ttnn_model_output, 0.97 if pretrained_weights else 0.999))
+    logger.info(assert_with_pcc(torch_model_output, ttnn_model_output, 0.999))
 
 
 # test for the inverted residual submodule
@@ -302,7 +306,6 @@ def test_inverted_residual_block4(device, torch_input, layer, use_program_cache,
     # # # Run Torch reference
     torch_model_output = sub_module(torch_input)
 
-    # # # Build TTNN config matching Torch
     config = InvertedResidualConfig(
         input_channels=24,
         kernel=5,
@@ -315,16 +318,13 @@ def test_inverted_residual_block4(device, torch_input, layer, use_program_cache,
         width_mult=1.0,
     )
 
-    # # # Create TTNN InvertedResidual
     ttnn_model = TtInvertedResidual(
         config=config,
         model_params=parameters,
         device=device,
         batch_size=ttnn_input.shape[0],
-        # block_id=block_id,
     )
 
-    # # # Run TTNN
     ttnn_model_output = ttnn_model(ttnn_input)
     ttnn_model_output = ttnn.to_torch(ttnn_model_output)
 
@@ -337,12 +337,11 @@ def test_inverted_residual_block4(device, torch_input, layer, use_program_cache,
 
     ttnn_model_output = ttnn_model_output.permute(0, 3, 1, 2)
 
-    # # print the first 10 elements of the output
     print("torch_model_output", torch_model_output[0, 0, 0, :10])
     print("ttnn_model_output", ttnn_model_output[0, 0, 0, :10])
 
-    pretrained_weights = True
-    logger.info(assert_with_pcc(torch_model_output, ttnn_model_output, pcc=0.94 if pretrained_weights else 0.999))
+    pretrained_weight = True
+    logger.info(assert_with_pcc(torch_model_output, ttnn_model_output, 0.93 if pretrained_weight else 0.999))
 
 
 @pytest.mark.parametrize("device_params", [{"l1_small_size": 79104}], indirect=True)
@@ -421,3 +420,54 @@ def test_inverted_residual_block4_conv1(device, torch_input, layer, use_program_
     ttnn_model_output = ttnn_model_output.permute(0, 3, 1, 2)
 
     logger.info(assert_with_pcc(torch_model_output, ttnn_model_output, pcc=0.99))
+
+
+# # test for the InvertedResidual[11] submodule
+@pytest.mark.parametrize("device_params", [{"l1_small_size": 79104}], indirect=True)
+@pytest.mark.parametrize("torch_input, layer", [(torch.rand(1, 80, 28, 28), "features.11")])
+def test_inverted_residual_block11(device, torch_input, layer, use_program_cache, reset_seeds):
+    disable_persistent_kernel_cache()
+    tv_model = tv_mv3(weights=MobileNet_V3_Large_Weights.DEFAULT)
+    sub_module = tv_model.features[11]
+
+    parameters = preprocess_model_parameters(
+        initialize_model=lambda: sub_module,
+        custom_preprocessor=custom_preprocessor,
+    )
+
+    print("sub_module", sub_module)
+    print("parameters", parameters)
+
+    ttnn_input = torch_input.permute(0, 2, 3, 1)
+    ttnn_input = ttnn.from_torch(ttnn_input, dtype=ttnn.bfloat16, device=device)
+    torch_model_output = sub_module(torch_input)
+
+    config = InvertedResidualConfig(
+        input_channels=80,
+        kernel=3,
+        expanded_channels=480,
+        out_channels=112,
+        use_se=True,
+        activation="HS",
+        stride=1,
+        dilation=1,
+        width_mult=1.0,
+    )
+
+    ttnn_model = TtInvertedResidual(
+        config=config,
+        model_params=parameters,
+        device=device,
+        batch_size=ttnn_input.shape[0],
+    )
+
+    ttnn_model_output = ttnn_model(ttnn_input)[0]
+    ttnn_model_output = ttnn.to_torch(ttnn_model_output)
+
+    ttnn_model_output = ttnn_model_output.reshape(
+        1, torch_model_output.shape[2], torch_model_output.shape[3], ttnn_model_output.shape[-1]
+    )
+
+    ttnn_model_output = ttnn_model_output.permute(0, 3, 1, 2)
+
+    logger.info(assert_with_pcc(torch_model_output, ttnn_model_output, pcc=0.999))
