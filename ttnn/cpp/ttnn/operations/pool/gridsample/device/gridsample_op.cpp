@@ -24,10 +24,10 @@ void gridsample::validate(const std::vector<Tensor>& input_tensors) const {
         "Input tensor and grid should have same batch size");
     TT_FATAL(input_tensor_a.storage_type() == StorageType::DEVICE, "Operands to copy need to be on device!");
     TT_FATAL(input_tensor_a.buffer() != nullptr, "Operands to copy need to be allocated in buffers on device!");
-    TT_FATAL(input_tensor_a.get_layout() == Layout::ROW_MAJOR, "Input tensor layout should be ROW_MAJOR");
-    TT_FATAL(input_tensor_a.get_dtype() == DataType::FLOAT32, "Input tensor data type should be BFLOAT16");
+    TT_FATAL(input_tensor_a.get_layout() == Layout::ROW_MAJOR, "Input tensor layout should be ROW MAJOR");
+    TT_FATAL(input_tensor_a.get_dtype() == DataType::FLOAT32, "Input tensor data type should be Float32");
     TT_FATAL(input_tensor_a.get_logical_shape().rank() == 4, "Input tensor should be in 4D");
-    TT_FATAL(mode == "bilinear", "Upsample only supports bilinear or for now");
+    TT_FATAL(mode == "bilinear", "Gridsample only supports bilinear for now");
 }
 
 ttnn::Shape gridsample::compute_output_shape(const ttnn::Shape& input_shape, const ttnn::Shape& grid_shape) const {
